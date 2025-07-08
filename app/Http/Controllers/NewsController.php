@@ -4,82 +4,42 @@ namespace App\Http\Controllers;
 
 use App\Services\NewsService;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 
 class NewsController extends Controller
 {
-    private NewsService $newsService;
-
-    public function __construct(NewsService $newsService)
-    {
-        $this->newsService = $newsService;
-    }
-
-    /**
-     * Отображение главной страницы с новостями
-     */
     public function index()
     {
         return view('news.index');
     }
 
-    /**
-     * API для получения новостей
-     */
-    public function getNews(Request $request): JsonResponse
+    public function getNews(Request $request)
     {
-        $news = $this->newsService->fetchNews();
+        $date = $request->input('date', date('Y-m-d'));
 
-
-        if ($request->has('date') && !empty($request->date)) {
-            $news = $this->newsService->filterByDate($news, $request->date);
-        }
-
-
-        if ($request->has('search') && !empty($request->search)) {
-            $news = $this->newsService->searchByTitle($news, $request->search);
-        }
-
-
-        $newsArray = array_map(function ($item) {
-            return $item->toArray();
-        }, $news);
+        $parser = new NewsService();
+        $news = $parser->parseNewsByDate($date);
 
         return response()->json([
             'success' => true,
-            'data' => array_values($newsArray)
+            'data' => array_values($news)
         ]);
     }
 
-    /**
-     * API для поиска новостей
-     */
-    public function search(Request $request): JsonResponse
+    public function searchNews(Request $request)
     {
-        $request->validate([
-            'query' => 'required|string|min:1',
-            'date' => 'nullable|date_format:Y-m-d'
-        ]);
+        $date = $request->input('date', date('Y-m-d'));
+        $query = $request->input('query');
 
-        $news = $this->newsService->fetchNews();
+        $parser = new NewsService();
+        $news = $parser->parseNewsByDate($date);
 
-
-        if ($request->has('date') && !empty($request->date)) {
-            $news = $this->newsService->filterByDate($news, $request->date);
-        }
-
-
-        $filteredNews = $this->newsService->searchByTitle($news, $request->query);
-
-        $newsArray = array_map(function ($item) {
-            return $item->toArray();
-        }, $filteredNews);
+        $filteredNews = array_filter($news, function ($item) use ($query) {
+            return stripos($item->title, $query) !== false;
+        });
 
         return response()->json([
             'success' => true,
-            'data' => array_values($newsArray),
-            'query' => $request->query,
-            'date' => $request->date
+            'data' => array_values($filteredNews)
         ]);
     }
 }

@@ -8,7 +8,7 @@
                 <div class="row">
                     <div class="col-md-4">
                         <label for="dateFilter" class="form-label">Фильтр по дате:</label>
-                        <input type="date" id="dateFilter" class="form-control" value="{{ date('Y-m-d') }}">
+                        <input type="date" id="dateFilter" class="form-control" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}">
                     </div>
                     <div class="col-md-6">
                         <label for="searchInput" class="form-label">Поиск по заголовкам:</label>
@@ -112,18 +112,18 @@
 
                 try {
                     const date = this.dateFilter.value;
-                    const url = `/api/news${date ? `?date=${date}` : ''}`;
+                    const response = await axios.get('/api/news', {
+                        params: { date }
+                    });
 
-                    const response = await axios.get(url);
-
-                    if (response.data.success) {
+                    if (response.data.success && response.data.data.length > 0) {
                         this.displayNews(response.data.data);
                     } else {
                         this.showNoResults();
                     }
                 } catch (error) {
                     console.error('Ошибка загрузки новостей:', error);
-                    this.showError('Ошибка при загрузке новостей');
+                    this.showError('Ошибка при загрузке новостей. Попробуйте позже.');
                 } finally {
                     this.hideLoading();
                 }
@@ -140,9 +140,12 @@
 
                 try {
                     const date = this.dateFilter.value;
-                    const url = `/api/news/search?query=${encodeURIComponent(query)}${date ? `&date=${date}` : ''}`;
-
-                    const response = await axios.get(url);
+                    const response = await axios.get('/api/news/search', {
+                        params: {
+                            query: query,
+                            date: date
+                        }
+                    });
 
                     if (response.data.success) {
                         this.displayNews(response.data.data);
@@ -152,14 +155,14 @@
                     }
                 } catch (error) {
                     console.error('Ошибка поиска:', error);
-                    this.showError('Ошибка при поиске новостей');
+                    this.showError('Ошибка при поиске новостей. Попробуйте позже.');
                 } finally {
                     this.hideLoading();
                 }
             }
 
             displayNews(news) {
-                if (news.length === 0) {
+                if (!news || news.length === 0) {
                     this.showNoResults();
                     return;
                 }
@@ -173,30 +176,31 @@
                 const imageHtml = news.image
                     ? `<img src="${news.image}" class="card-img-top news-image" alt="${news.title}" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">`
                     : `<div class="card-img-top news-image bg-light d-flex align-items-center justify-content-center">
-                <span class="text-muted">Нет изображения</span>
-               </div>`;
+                          <span class="text-muted">Нет изображения</span>
+                       </div>`;
 
                 return `
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card news-card h-100">
-                    ${imageHtml}
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title">${news.title}</h5>
-                        <div class="mt-auto">
-                            <small class="text-muted">Дата: ${news.date}</small>
-                            <div class="mt-2">
-                                <a href="${news.url}" target="_blank" class="btn btn-primary btn-sm">Читать полностью</a>
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card news-card h-100">
+                            ${imageHtml}
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">${news.title}</h5>
+                                <div class="mt-auto">
+                                    <small class="text-muted">${news.date}</small>
+                                    <div class="mt-2">
+                                        <a href="${news.url}" target="_blank" class="btn btn-primary btn-sm">Читать полностью</a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        `;
+                `;
             }
 
             showNoResults() {
                 this.newsList.innerHTML = '';
                 this.noResults.style.display = 'block';
+                this.searchResults.style.display = 'none';
             }
 
             showSearchResults(query, date) {
@@ -207,12 +211,12 @@
 
             showError(message) {
                 this.newsList.innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-danger" role="alert">
-                    ${message}
-                </div>
-            </div>
-        `;
+                    <div class="col-12">
+                        <div class="alert alert-danger" role="alert">
+                            ${message}
+                        </div>
+                    </div>
+                `;
             }
 
             resetFilters() {

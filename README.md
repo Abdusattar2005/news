@@ -1,7 +1,9 @@
 Как запустить
 
-1. Клонируй репозиторий:
-git@github.com:Abdusattar2005/news.git
+ Клонируй репозиторий:
+ git clone git@github.com:Abdusattar2005/news.git
+
+
 cd news
 
 composer install
