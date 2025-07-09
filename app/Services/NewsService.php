@@ -31,13 +31,11 @@ class NewsService
 
             $html = $response->getBody()->getContents();
 
-            // Для отладки можно сохранить HTML
-            // file_put_contents(storage_path('last_page.html'), $html);
+
 
             $crawler = new Crawler($html);
             $news = [];
 
-            // Новые селекторы для Kaktus.media
             $crawler->filter('.Tag--articles .ArticleItem')->each(function (Crawler $node) use (&$news, $date) {
                 try {
                     $titleNode = $node->filter('.ArticleItem--name');
@@ -52,7 +50,6 @@ class NewsService
                     $imageNode = $node->filter('.ArticleItem--image img');
                     if ($imageNode->count() > 0) {
                         $image = $imageNode->attr('src');
-                        // Если URL изображения относительный, преобразуем в абсолютный
                         if ($image && !preg_match('/^https?:\/\//', $image)) {
                             $image = 'https://kaktus.media' . ltrim($image, '/');
                         }
@@ -65,7 +62,6 @@ class NewsService
                         image: $image
                     );
                 } catch (\Exception $e) {
-                    // Пропускаем новость, если возникла ошибка при парсинге
                     logger()->error('Error parsing news item: ' . $e->getMessage());
                 }
             });
